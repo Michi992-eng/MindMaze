@@ -1,11 +1,19 @@
-import type { Metadata } from 'next';
-import PuzzlesPage from '@/components/puzzles/PuzzlesPage';
+import type { Metadata, Viewport } from 'next';
+import MindMazeSite from '@/components/mindmaze/MindMazeSite';
 
 export const metadata: Metadata = {
-  title: 'Puzzles',
-  description: 'Traditional Mongolian puzzles: assemble a six-piece wooden burr, meet the games our ancestors played and see our partner schools.',
+  title: { absolute: 'MindMaze' },
+  description:
+    'MindMaze teaches children to think through hands-on puzzles: traditional Mongolian wooden puzzles, logic grids and strategy games that reward patience.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0d1324',
 };
 
 export default function Page() {
-  return <PuzzlesPage />;
+  return <MindMazeSite />;
 }

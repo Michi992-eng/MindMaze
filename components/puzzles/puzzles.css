@@ -23,7 +23,12 @@ html:has(.page-puzzles) {
   --wood-shadow: rgba(40, 28, 10, 0.32);
   --display: "DM Serif Display", Georgia, serif;
   --body: "Instrument Serif", Georgia, serif;
-  --nav-h: 89px;
+  --nav-h: 91px;
+}
+@media (max-width: 560px) {
+  html:has(.page-puzzles) {
+    --nav-h: 71px;
+  }
 }
 @media (prefers-color-scheme: dark) {
   html:has(.page-puzzles):not([data-theme="light"]) {
@@ -119,7 +124,6 @@ body:has(.page-puzzles) {
   max-width: none;
   padding: 26px max(clamp(24px, 5vw, 64px), calc((100% - 1360px) / 2)) 18px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 16px 32px;
   font-family: "Jost", "Futura", sans-serif;
@@ -149,7 +153,7 @@ body:has(.page-puzzles) {
 .page-puzzles .links {
   display: flex;
   flex-wrap: wrap;
-  flex: 1 1 520px;
+  flex: 1 1 auto;
   justify-content: center;
   gap: 4px 26px;
   margin: 0;
@@ -214,12 +218,40 @@ body:has(.page-puzzles) {
   border: 0;
   border-radius: 0;
 }
-@media (max-width: 860px) {
+@media (max-width: 820px) {
   .page-puzzles .links {
     display: none;
   }
   .page-puzzles .nav.wrap {
     justify-content: space-between;
+  }
+}
+/* phones: keep the header on one row so --nav-h stays true */
+@media (max-width: 560px) {
+  .page-puzzles .nav.wrap {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .page-puzzles .logo {
+    gap: 6px;
+  }
+  .page-puzzles .logo-icon {
+    height: 24px;
+  }
+  .page-puzzles .nav-end {
+    gap: 8px;
+  }
+  .page-puzzles .lang button {
+    padding: 0 10px;
+  }
+  .page-puzzles .nav .btn {
+    padding: 0 12px;
+    letter-spacing: 0.08em;
+  }
+}
+@media (max-width: 340px) {
+  .page-puzzles .nav .logo-word {
+    display: none;
   }
 }
 
@@ -300,6 +332,16 @@ body:has(.page-puzzles) {
   position: relative;
   z-index: 2;
 }
+/* soft veil so a piece flying behind the copy never fights the text */
+.page-puzzles .stage-copy::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  background: var(--bg);
+  filter: blur(20px);
+  pointer-events: none;
+}
 .page-puzzles #burr {
   position: absolute;
   inset: 0;
@@ -337,6 +379,7 @@ body:has(.page-puzzles) {
   gap: 18px;
 }
 .page-puzzles .count {
+  flex: none;
   font-variant-numeric: tabular-nums;
   color: var(--blue);
 }
@@ -346,7 +389,8 @@ body:has(.page-puzzles) {
   color: var(--ink-2);
   letter-spacing: 0.06em;
 }
-@media (max-width: 760px) {
+/* stacked stage; same breakpoint as `mobile` in burr.ts */
+@media (max-width: 960px) {
   .page-puzzles .stage .wrap {
     grid-template-columns: 1fr;
     align-items: start;
@@ -358,11 +402,21 @@ body:has(.page-puzzles) {
   }
   .page-puzzles .floor {
     left: 50%;
-    width: 62vw;
+    width: min(62vw, 340px);
     bottom: 12%;
   }
   .page-puzzles .hint {
     display: none;
+  }
+}
+@media (max-width: 560px) {
+  .page-puzzles .caption {
+    left: 16px;
+    right: 16px;
+    bottom: 14px;
+    justify-content: space-between;
+    gap: 12px;
+    letter-spacing: 0.1em;
   }
 }
 
@@ -698,8 +752,7 @@ body:has(.page-puzzles) {
   object-position: 50% 100%;
 }
 @media (max-width: 860px) {
-  .page-puzzles .edu-head,
-  .page-puzzles .edu-body {
+  .page-puzzles .edu-head {
     grid-template-columns: 1fr;
   }
   .page-puzzles .edu-fig {
@@ -711,9 +764,6 @@ body:has(.page-puzzles) {
   background: var(--edu-bg);
   color: var(--edu-ink);
   font-family: var(--body);
-}
-.page-puzzles #edu .wrap {
-  max-width: 1120px;
 }
 .page-puzzles .edu-part {
   display: flex;
@@ -787,6 +837,11 @@ body:has(.page-puzzles) {
   align-items: start;
   padding-top: clamp(32px, 4vw, 48px);
   border-top: 1px solid color-mix(in srgb, var(--edu-rule) 55%, transparent);
+}
+@media (max-width: 860px) {
+  .page-puzzles .edu-body {
+    grid-template-columns: 1fr;
+  }
 }
 .page-puzzles .edu-col {
   min-width: 0;
@@ -1063,7 +1118,7 @@ body:has(.page-puzzles) {
 .page-puzzles .reg-facts {
   margin: 36px 0 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px 24px;
 }
 .page-puzzles .reg-facts dt {
@@ -1087,6 +1142,7 @@ body:has(.page-puzzles) {
     "Futura",
     sans-serif;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 .page-puzzles .reg-facts a {
   text-decoration: none;
@@ -1144,6 +1200,10 @@ body:has(.page-puzzles) {
   font: 400 19px var(--body);
   letter-spacing: 0;
   text-transform: none;
+}
+.page-puzzles .reg-f input,
+.page-puzzles .reg-f select {
+  height: 50px;
 }
 .page-puzzles .reg-f textarea {
   resize: vertical;
@@ -1334,4 +1394,25 @@ body:has(.page-puzzles) {
 .page-puzzles .game-top h3,
 .page-puzzles .game-top .tag {
   color: #7a6650;
+}
+
+/* phones: the side label eats the width the long Mongolian heading needs */
+@media (max-width: 560px) {
+  .page-puzzles .reg-vert {
+    display: none;
+  }
+  .page-puzzles .reg-tbox h2 {
+    font-size: clamp(24px, 7.6vw, 34px);
+  }
+}
+
+/* nothing assembles under reduced motion, so there is nothing to scroll through */
+@media (prefers-reduced-motion: reduce) {
+  .page-puzzles #puzzles {
+    height: auto;
+  }
+  .page-puzzles .stage {
+    position: relative;
+    top: 0;
+  }
 }

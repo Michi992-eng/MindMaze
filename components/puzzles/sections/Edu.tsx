@@ -1,6 +1,7 @@
 import type { PuzzlesVals } from '../PuzzlesPage';
 
 export default function Edu({ v }: { v: PuzzlesVals }) {
+  const { t } = v;
   return (
     <section id="edu" aria-labelledby="edu-title">
       {' '}
@@ -10,14 +11,10 @@ export default function Edu({ v }: { v: PuzzlesVals }) {
           {' '}
           <div>
             {' '}
-            <p className="edu-kicker">MindMaze EDU</p> <h2 id="edu-title">Puzzles in the classroom</h2>{' '}
-            <p className="edu-intro">
-              We bring traditional Mongolian puzzles into the school day: short, hands-on sessions where
-              children slow down, test ideas and explain their thinking. Here is how a program works and what
-              we are measuring.
-            </p>{' '}
+            <p className="edu-kicker">MindMaze EDU</p> <h2 id="edu-title">{t.ed_title}</h2>{' '}
+            <p className="edu-intro">{t.ed_intro}</p>{' '}
           </div>{' '}
-          <figure className="edu-fig" aria-label="Illustration: a person whose head is a wooden burr puzzle">
+          <figure className="edu-fig" aria-label={t.ed_fig}>
             {' '}
             <img src="/media/774615564104119b5122b2c63b75bf5a.webp" alt="" className="fig-l fig-body" />{' '}
             <img src="/media/48af9914e420382cb7a0ac6230b0cade.webp" alt="" className="fig-l fig-head" />{' '}
@@ -27,55 +24,51 @@ export default function Edu({ v }: { v: PuzzlesVals }) {
         <div className="edu-body">
           {' '}
           <div className="edu-col">
-            <h3 className="edu-h">At a glance</h3>
+            <h3 className="edu-h">{t.ed_glance}</h3>
             <table className="glance">
               <tbody>
                 <tr>
-                  <th scope="row">Where</th>
-                  <td>5 aimags · 12 schools</td>
+                  <th scope="row">{t.ed_where}</th>
+                  <td>{t.ed_whereV}</td>
                 </tr>
                 <tr>
-                  <th scope="row">Reach</th>
-                  <td>840+ children</td>
+                  <th scope="row">{t.ed_reach}</th>
+                  <td>{t.ed_reachV}</td>
                 </tr>
                 <tr>
-                  <th scope="row">Format</th>
-                  <td>In-class sessions during the school day</td>
+                  <th scope="row">{t.ed_format}</th>
+                  <td>{t.ed_formatV}</td>
                 </tr>
                 <tr>
-                  <th scope="row">Grades</th>
-                  <td>3rd and 4th graders</td>
+                  <th scope="row">{t.ed_grades}</th>
+                  <td>{t.ed_gradesV}</td>
                 </tr>
                 <tr>
-                  <th scope="row">Puzzles</th>
-                  <td>6 traditional puzzles</td>
+                  <th scope="row">{t.ed_puzzles}</th>
+                  <td>{t.ed_puzzlesV}</td>
                 </tr>
                 <tr>
-                  <th scope="row">Team</th>
-                  <td>11 mentors &amp; volunteers</td>
+                  <th scope="row">{t.ed_team}</th>
+                  <td>{t.ed_teamV}</td>
                 </tr>
               </tbody>
             </table>
           </div>{' '}
           <div className="edu-col">
             {' '}
-            <h3 className="edu-h">Impact so far</h3>{' '}
-            <p className="edu-note">
-              Early estimates from our first sessions. Full survey results from students and teachers are
-              coming soon.
-            </p>{' '}
+            <h3 className="edu-h">{t.ed_impact}</h3> <p className="edu-note">{t.ed_note}</p>{' '}
             <div className="stats">
               <div>
                 <b>78%</b>
-                <span>solved a puzzle on their own</span>
+                <span>{t.ed_s0}</span>
               </div>
               <div>
                 <b>64%</b>
-                <span>focus longer in class, say teachers</span>
+                <span>{t.ed_s1}</span>
               </div>
               <div>
                 <b>91%</b>
-                <span>want another session</span>
+                <span>{t.ed_s2}</span>
               </div>
             </div>{' '}
           </div>{' '}

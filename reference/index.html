@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MindMaze</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: navy MindMaze world over a fixed Mongolian key-pattern ground; one fixed WebGL stage behind the page; the six-piece burr anchors to the hero, the scroll-assembly stage and the contact block */
+:root{
+  --bg:#0d1324; --bg-2:#141c33; --card:#151d33; --line:#26304a; --pattern:#1f2a45;
+  --ink:#eef1f8; --ink-2:#a7b0c6; --blue:#5aa2f0; --amber:#f0a447;
+  --wood-1:#fbf5ec; --wood-2:#efe2cf; --wood-3:#e5d3bb; --wood-ink:#2a1a0c; --wood-ink-2:#7a6650;
+  --shadow:rgba(0,0,0,.6);
+  --display:"DM Serif Display",Georgia,"Times New Roman",serif;
+  --body:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --nav-h:72px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:var(--nav-h);font-synthesis-weight:none}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:19px;line-height:1.5;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--bg)}
+a{color:inherit}
+img{max-width:100%;display:block}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (min-width:760px){.wrap{padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px))}}
+
+/* Mongolian key pattern (ulzii-style meander), fixed behind everything, softened in the middle */
+.khee{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none}
+.khee::before{content:"";position:absolute;inset:-60%;background:var(--pattern);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2748%27%20height%3D%2748%27%20viewBox%3D%270%200%2048%2048%27%3E%3Cpath%20d%3D%27M0%203H45V45H9V15H33V33H21V24%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%273.2%27%20stroke-linecap%3D%27square%27/%3E%3Cpath%20d%3D%27M48%203H45%27%20stroke%3D%27black%27%20stroke-width%3D%273.2%27/%3E%3C/svg%3E") 0 0/56px 56px repeat;
+  mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2748%27%20height%3D%2748%27%20viewBox%3D%270%200%2048%2048%27%3E%3Cpath%20d%3D%27M0%203H45V45H9V15H33V33H21V24%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%273.2%27%20stroke-linecap%3D%27square%27/%3E%3Cpath%20d%3D%27M48%203H45%27%20stroke%3D%27black%27%20stroke-width%3D%273.2%27/%3E%3C/svg%3E") 0 0/56px 56px repeat;
+  transform:rotate(45deg);filter:blur(.4px)}
+.khee::after{content:"";position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 50%,var(--bg) 30%,color-mix(in srgb,var(--bg) 55%,transparent) 72%,transparent 100%)}
+
+/* 3D stage */
+#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
+main,footer{position:relative}
+.hero > .wrap,.sticky > .wrap,footer > .wrap,.band{position:relative;z-index:2}
+.slot{position:relative;aspect-ratio:1;width:100%;max-width:100%;cursor:grab;touch-action:pan-y}
+.slot:active{cursor:grabbing}
+.slot .fallback{position:absolute;inset:14%;width:72%;height:72%;object-fit:contain;filter:drop-shadow(0 30px 40px var(--shadow))}
+.has-gl .slot .fallback{display:none}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.progress{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--amber)}
+.nav{min-height:var(--nav-h);display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:10px}
+.logo{display:block;height:48px;aspect-ratio:788/244;background:var(--ink);-webkit-mask:url(img/logo.png) center/contain no-repeat;mask:url(img/logo.png) center/contain no-repeat}
+.links{display:flex;gap:4px clamp(22px,2.6vw,40px);list-style:none;margin:0 auto;padding:0}
+.links a{text-decoration:none;font-size:16px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);padding:8px 0;border-bottom:2px solid transparent;display:inline-block}
+.links a:hover{color:var(--ink)}
+.links a.active{color:var(--blue);border-color:var(--blue)}
+.lang{display:flex;border:1px solid var(--line);border-radius:99px;padding:3px}
+.lang button{border:0;background:none;font:400 15px var(--body);color:var(--ink-2);padding:7px 11px;border-radius:99px;cursor:pointer;min-height:36px}
+.lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 26px;border-radius:99px;background:var(--blue);color:#fff;text-decoration:none;font:400 20px/1 var(--body);border:1px solid var(--blue);cursor:pointer;transition:transform .25s ease,background .25s}
+.btn:hover{transform:translateY(-2px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.sm{min-height:44px;padding:0 22px;font-size:19px}
+@media (max-width:860px){.links{display:none}.lang{margin-left:auto}}
+@media (max-width:480px){.nav{gap:10px}.logo{height:38px}.btn.sm{padding:0 16px;font-size:17px}.lang button{padding:7px 9px}}
+
+/* shared type */
+.eyebrow{display:flex;align-items:center;gap:12px;font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);padding-bottom:16px;border-bottom:1px solid var(--line);max-width:420px;margin:0}
+.eyebrow i{width:13px;height:13px;border:2px solid currentColor;flex:none}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+h1,h2{text-transform:uppercase;line-height:.95;letter-spacing:-.005em;margin:28px 0 22px}
+h2{font-size:clamp(44px,5.8vw,84px)}
+h1 em,h2 em{font-style:normal;color:var(--blue);display:block}
+.lede{font-size:clamp(19px,1.6vw,24px);color:var(--ink-2);max-width:36ch;margin:0;line-height:1.45}
+
+/* hero = pinned build stage */
+.hero{position:relative;height:280vh}
+.sticky{position:sticky;z-index:-1;top:calc(var(--nav-h) + env(safe-area-inset-top,0px));height:calc(100vh - var(--nav-h));height:calc(100dvh - var(--nav-h));display:flex;align-items:center;overflow:hidden}
+.wordmark{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font:400 clamp(80px,17vw,270px)/.85 var(--display);text-transform:uppercase;letter-spacing:-.02em;color:color-mix(in srgb,var(--pattern) 70%,var(--bg));white-space:nowrap;pointer-events:none;user-select:none;z-index:-1}
+.sticky .wrap{width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(16px,4vw,56px);align-items:center}
+.hero h1{font-size:clamp(52px,7.4vw,112px);margin:22px 0 20px}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:10px 36px;margin-top:36px;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+.hero-meta b{display:block;font:400 34px/1.1 var(--display);letter-spacing:0;color:var(--amber);margin-bottom:2px}
+.stage-side{display:flex;flex-direction:column;align-items:center;min-width:0}
+.sticky .slot{width:100%;max-width:min(600px,calc(100vh - var(--nav-h) - 170px))}
+.build-info{width:100%;max-width:360px}
+.hint{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 0;display:flex;gap:10px;align-items:center;justify-content:center}
+.counter{display:flex;align-items:baseline;justify-content:center;gap:14px}
+.counter b{white-space:nowrap;font:400 clamp(34px,3.4vw,48px)/1 var(--display);font-variant-numeric:tabular-nums;color:var(--blue)}
+.counter span{white-space:nowrap;color:var(--ink-2);font-size:13px;letter-spacing:.2em;text-transform:uppercase}
+.bar{height:3px;background:var(--line);border-radius:2px;margin-top:12px;overflow:hidden}
+.bar i{display:block;height:100%;width:100%;background:var(--amber);transform-origin:left;transform:scaleX(0)}
+@media (max-height:760px) and (min-width:861px){.hero h1{font-size:clamp(46px,6vw,84px)}.hero-meta{display:none}}
+@media (max-width:860px){
+  .hero{height:240vh}
+  .sticky{align-items:flex-start;padding-top:12px}
+  .sticky .wrap{grid-template-columns:minmax(0,1fr);gap:4px}
+  .stage-side{order:-1}
+  .sticky .slot{width:min(100%,40vh,380px)}
+  .build-info{max-width:300px}
+  .counter b{font-size:30px}
+  .counter span{font-size:11px;letter-spacing:.14em}
+  .hint{display:none}
+  .hero .eyebrow{display:none}
+  .hero h1{font-size:clamp(40px,11vw,60px);margin:10px 0 10px}
+  .hero .lede{font-size:17px}
+  .hero .ctas{margin-top:16px}
+  .hero-meta{display:none}
+  .wordmark{top:30%}
+}
+@media (max-width:860px) and (max-height:700px){.hero .lede{display:none}}
+
+/* bands sit on the pattern; .alt adds a navy wash */
+.band{padding-block:clamp(72px,10vw,140px)}
+.band.alt{background:color-mix(in srgb,var(--bg-2) 82%,transparent)}
+.head{display:flex;flex-wrap:wrap;gap:24px 64px;align-items:end;justify-content:space-between;margin-bottom:clamp(36px,5vw,64px)}
+.head > div{flex:1 1 520px;min-width:0}
+.head .lede{flex:0 1 420px}
+#games h2{font-size:clamp(48px,7vw,104px);line-height:.9}
+
+/* games: warm wood cards */
+.games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,3vw,36px)}
+@media (max-width:960px){.games{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.games{grid-template-columns:minmax(0,1fr)}}
+.game{position:relative;background:radial-gradient(120% 90% at 70% 40%,var(--wood-1) 0%,var(--wood-2) 60%,var(--wood-3) 100%);border-radius:18px;padding:22px 22px 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 20px 40px -24px rgba(0,0,0,.8);transition:transform .3s ease}
+.game:hover{transform:translateY(-4px)}
+.game-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.game h3{font-size:26px;line-height:1.1;color:var(--wood-ink);margin-bottom:2px}
+.game-top span:not(.tag){color:var(--wood-ink-2);font-size:17px}
+.tag{font:400 14px/1 var(--body);padding:6px 11px;border-radius:99px;white-space:nowrap;background:#f8eee2;color:#9a5414}
+.tag.dis{background:#e6f1e6;color:#25653c}
+.game figure{margin:auto 0 0;height:230px;display:flex;align-items:center;justify-content:center;padding:14px 6px 30px;position:relative}
+.game figure::after{content:"";position:absolute;left:50%;bottom:16px;width:62%;height:28px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(58,36,12,.5),rgba(58,36,12,.18) 55%,transparent);filter:blur(2px)}
+.game img{position:relative;z-index:1;max-height:100%;width:auto;max-width:84%;object-fit:contain;filter:drop-shadow(0 6px 6px rgba(60,38,12,.22));transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.game:hover img{transform:translateY(-6px) rotate(-3deg) scale(1.04)}
+
+/* schools */
+.schools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,24px)}
+@media (max-width:860px){.schools{grid-template-columns:minmax(0,1fr)}}
+.school{margin:0;border-radius:18px;overflow:hidden;background:#1a2f6b;display:flex;flex-direction:column}
+.school > div{overflow:hidden}
+.school img{width:100%;aspect-ratio:16/10;object-fit:cover;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.school:hover img{transform:scale(1.05)}
+.school figcaption{color:#fff;font-size:19px;padding:16px 20px 18px}
+.next-h{font:400 15px var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin:48px 0 16px;display:flex;align-items:center;gap:14px}
+.next-h::after{content:"";flex:1;height:1px;background:var(--line)}
+.next-schools{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,18px)}
+.next-schools li{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;font-size:19px;line-height:1.25;transition:border-color .2s,transform .2s}
+.next-schools li:hover{border-color:var(--blue);transform:translateY(-2px)}
+.next-schools svg{flex:none;width:22px;height:22px;color:var(--blue)}
+@media (max-width:960px){.next-schools{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.next-schools{grid-template-columns:minmax(0,1fr)}}
+
+/* in-class photo reels */
+.reels{display:flex;flex-direction:column;gap:clamp(14px,2vw,22px);margin-top:clamp(8px,2vw,16px);-webkit-mask:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.reel{overflow:hidden;padding-block:14px}
+.reel-track{display:flex;width:max-content;animation:reel 160s linear infinite}
+.reel.rtl .reel-track{animation-direction:reverse;animation-duration:85s}
+.reel-set{display:flex;gap:clamp(14px,2vw,22px);padding-right:clamp(14px,2vw,22px)}
+@keyframes reel{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.reels:hover .reel-track{animation-play-state:paused}
+.shot{margin:0;flex:none;height:clamp(220px,27vw,380px);border-radius:20px;overflow:hidden;background:var(--card);box-shadow:0 24px 44px -26px rgba(0,0,0,.9);transform:rotate(-1.2deg);transition:transform .6s cubic-bezier(.2,.8,.2,1),box-shadow .6s}
+.reel.rtl .shot{height:clamp(170px,19vw,260px);transform:rotate(1.2deg)}
+.shot:nth-child(even){transform:rotate(1deg) translateY(10px)}
+.reel.rtl .shot:nth-child(even){transform:rotate(-1deg) translateY(-8px)}
+.shot img{height:100%;width:auto;max-width:none;object-fit:cover;transition:transform 1.2s cubic-bezier(.2,.8,.2,1),filter .6s;filter:saturate(.92)}
+.shot:hover{transform:rotate(0) scale(1.04);box-shadow:0 30px 60px -24px rgba(0,0,0,.95),0 0 0 2px var(--blue)}
+.shot:hover img{transform:scale(1.06);filter:saturate(1.08)}
+@media (prefers-reduced-motion:reduce){.reel{overflow-x:auto}.reel-track{animation:none}.reel-set[aria-hidden]{display:none}}
+
+/* edu */
+.edu-head{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center}
+@media (max-width:860px){.edu-head{grid-template-columns:minmax(0,1fr)}}
+.edu-kicker{font:italic 400 24px/1 var(--body);color:var(--amber);margin:0 0 4px}
+#edu h2{font-size:clamp(40px,5vw,64px);margin:8px 0 18px}
+#edu h2 em{display:inline}
+.edu-intro{color:var(--ink-2);font-size:clamp(19px,1.6vw,22px);max-width:46ch;margin:0}
+.fig{position:relative;aspect-ratio:696/817;width:min(100%,400px);margin:0 auto}
+.fig img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.fig .head-l{transform-origin:43.8% 55.8%;animation:headsway 5.5s ease-in-out infinite}
+@keyframes headsway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg) translateY(-1.5px)}}
+@media (prefers-reduced-motion:reduce){.fig .head-l{animation:none}}
+.edu-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,56px);margin-top:clamp(40px,6vw,72px)}
+@media (max-width:860px){.edu-body{grid-template-columns:minmax(0,1fr)}}
+.edu-h{display:flex;align-items:center;gap:12px;font:400 clamp(21px,1.9vw,27px)/1.1 var(--display);text-transform:uppercase;letter-spacing:.03em;color:var(--ink);margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--blue)}
+.edu-h::before{content:"";width:10px;height:10px;background:var(--amber);flex:none}
+.edu-body > div{background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid var(--line);border-radius:22px;padding:clamp(22px,3vw,38px);box-shadow:0 24px 50px -30px rgba(0,0,0,.8)}
+.edu-body > .rise{transition:transform 1.4s cubic-bezier(.16,1,.3,1),opacity 1.2s ease}
+.js .edu-body > .rise:not(.in){transform:translateY(70px) scale(.94);opacity:.35}
+@media (prefers-reduced-motion:reduce){.js .edu-body > .rise:not(.in){transform:none;opacity:1}}
+.glance{width:100%;border-collapse:collapse;font-size:19px}
+.glance th{text-align:left;font:400 13px var(--body);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);padding:15px 16px 15px 0;width:32%;vertical-align:top;border-top:1px solid var(--line)}
+.glance td{padding:12px 0;border-top:1px solid var(--line)}
+.glance tr:last-child th,.glance tr:last-child td{border-bottom:1px solid var(--line)}
+.edu-note{color:var(--ink-2);margin:0 0 20px;font-size:18px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:480px){.stats{grid-template-columns:minmax(0,1fr)}}
+.stats div{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:20px 18px;display:flex;flex-direction:column;gap:6px}
+.stats b{font:400 clamp(44px,4.4vw,60px)/1 var(--display);color:var(--amber);font-variant-numeric:tabular-nums}
+.stats span{color:var(--ink-2);font-size:17px;line-height:1.35}
+
+/* impact */
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:clamp(24px,5vw,72px);align-items:start}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.skills{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.skills span{font-size:20px;padding:10px 20px;border:1px solid var(--line);border-radius:99px;background:color-mix(in srgb,var(--card) 70%,transparent);transition:background .25s,color .25s,border-color .25s}
+.skills span:hover{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* contact */
+footer{padding-block:clamp(56px,8vw,110px) 28px;border-top:1px solid var(--line)}
+.cta-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(16px,4vw,56px);align-items:center}
+footer h2{font-size:clamp(48px,7.5vw,112px);margin-top:0}
+footer h2 em{color:var(--amber)}
+.mail-row{margin-top:30px}
+.mail-row p{margin:0 0 8px;color:var(--ink-2)}
+.mail{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px}
+.mail strong{font:400 clamp(26px,3.2vw,40px)/1.2 var(--display);user-select:all;overflow-wrap:anywhere}
+.legal{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:clamp(48px,7vw,88px);padding-top:20px;border-top:1px solid var(--line);font-size:14px;letter-spacing:.14em;color:var(--ink-2)}
+
+/* gentle entrance from a visible resting state */
+.js .rise:not(.in){transform:translateY(26px)}
+.rise{transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){.js .rise:not(.in){transform:none}}
+</style>
+
+</head>
+<body>
+<div class="khee" aria-hidden="true"></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+
+<header>
+  <div class="progress" id="progress"></div>
+  <nav class="wrap nav" aria-label="Main">
+    <a class="logo" href="#puzzles" aria-label="MindMaze home"></a>
+    <ul class="links">
+      <li><a href="#puzzles" data-i="nav_puzzles">puzzles</a></li>
+      <li><a href="#games" data-i="nav_why">games</a></li>
+      <li><a href="#edu">edu</a></li>
+      <li><a href="#impact" data-i="nav_impact">impact</a></li>
+    </ul>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lang-en" aria-pressed="true" data-lang="en">EN</button>
+      <button type="button" id="lang-mn" aria-pressed="false" data-lang="mn">MN</button>
+    </div>
+    <a class="btn sm" href="#contact" data-i="contact">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HERO: the burr builds here while the first page stays pinned -->
+  <section id="puzzles" class="hero" aria-label="MindMaze">
+    <div class="sticky">
+      
+      <div class="wrap">
+        <div class="rise">
+          <p class="eyebrow"><i aria-hidden="true"></i><span data-i="e2">01 — Traditional puzzles</span></p>
+          <h1><span data-i="h1a">Think in</span> <em data-i="h1b">moves.</em></h1>
+          <p class="lede" data-i="l1">MindMaze teaches children to think through hands-on puzzles: wooden puzzles, logic grids and strategy games that reward patience.</p>
+        </div>
+        <div class="stage-side">
+          <div class="slot" data-slot="build" aria-label="A six-piece wooden burr puzzle that builds as you scroll. Drag to turn it." role="img">
+            <img class="fallback" src="../assets/img/cross.webp" alt="">
+          </div>
+          <div class="build-info">
+            
+            
+            <p class="hint"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M6 15l6 6 6-6"></path></svg><span data-i="hint">Scroll to assemble · drag to turn</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02: Mongolian puzzles -->
+  <section id="games" class="band">
+    <div class="wrap">
+      <div class="head rise">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i><span data-i="e3">02 — Mongolian puzzles</span></p>
+          <h2><span data-i="g_a">Games our</span> <em data-i="g_b">ancestors played.</em></h2>
+        </div>
+        <p class="lede" data-i="g_l">Carved from wood and bone, Mongolian puzzles lock, interlock and untangle — tests of logic, patience and dexterity.</p>
+      </div>
+      <div class="games">
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g0t">Star puzzle</h3><span data-i="g0s">Six-piece star burr</span></div><span class="tag int" data-i="tag_int">Interlocking</span></div><figure><img src="../assets/img/star.webp" alt="Star puzzle, six-piece star burr" loading="lazy"></figure></article>
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g1t">Cross puzzle</h3><span data-i="g1s">Six-piece burr</span></div><span class="tag int" data-i="tag_int">Interlocking</span></div><figure><img src="../assets/img/cross.webp" alt="Cross puzzle, six-piece burr" loading="lazy"></figure></article>
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g2t">Cross lock</h3><span data-i="g2s">Three-piece burr</span></div><span class="tag int" data-i="tag_int">Interlocking</span></div><figure><img src="../assets/img/crosslock.webp" alt="Cross lock, three-piece burr" loading="lazy"></figure></article>
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g3t">Oyun tulkhuur</h3><span data-i="g3s">Ring puzzle</span></div><span class="tag dis" data-i="tag_dis">Disentangling</span></div><figure><img src="../assets/img/oyun-tulkhuur.webp" alt="Oyun tulkhuur, ring puzzle" loading="lazy"></figure></article>
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g4t">Bugj niiluulekh</h3><span data-i="g4s">Bone &amp; string puzzle</span></div><span class="tag dis" data-i="tag_dis">Disentangling</span></div><figure><img src="../assets/img/bugj.webp" alt="Bugj niiluulekh, bone and string puzzle" loading="lazy"></figure></article>
+        <article class="game rise"><div class="game-top"><div><h3 data-i="g5t">Snowflake puzzle</h3><span data-i="g5s">Interlocking burr</span></div><span class="tag int" data-i="tag_int">Interlocking</span></div><figure><img src="../assets/img/snowflake.webp" alt="Snowflake puzzle, interlocking burr" loading="lazy"></figure></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03: Schools -->
+  <section id="schools" class="band alt">
+    <div class="wrap">
+      <div class="head rise">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i><span data-i="e4">03 — Schools</span></p>
+          <h2><span data-i="h4a">Curriculum adopted</span> <em data-i="h4b">in 3 schools.</em></h2>
+        </div>
+      </div>
+      <div class="schools">
+        <figure class="school rise"><img src="../assets/img/school-21.webp" alt="Students working on wooden puzzles at 21st Secondary School of Ulaanbaatar" loading="lazy"><figcaption data-i="sc0">21st Secondary School of Ulaanbaatar</figcaption></figure>
+        <figure class="school rise"><img src="../assets/img/school-24.webp" alt="Students working on wooden puzzles at 24th Secondary School of Ulaanbaatar" loading="lazy"><figcaption data-i="sc1">24th Secondary School of Ulaanbaatar</figcaption></figure>
+        <figure class="school rise"><img src="../assets/img/school-uvs1.webp" alt="Students working on wooden puzzles at 1st Secondary School of Uvurkhangai" loading="lazy"><figcaption data-i="sc2">1st Secondary School of Uvurkhangai</figcaption></figure>
+      </div>
+      <h3 class="next-h" data-i="ns_h">Next partner schools</h3>
+        <ul class="next-schools">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h17v16H6V8h10v8h-6v-4" fill="none" stroke="currentColor" stroke-width="2"></path></svg><span data-i="ns0">1st School of Erdenet</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h17v16H6V8h10v8h-6v-4" fill="none" stroke="currentColor" stroke-width="2"></path></svg><span data-i="ns1">2nd School of Uvurkhangai</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h17v16H6V8h10v8h-6v-4" fill="none" stroke="currentColor" stroke-width="2"></path></svg><span data-i="ns2">1st School of Kherlen sum</span></li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h17v16H6V8h10v8h-6v-4" fill="none" stroke="currentColor" stroke-width="2"></path></svg><span data-i="ns3">3rd School of Arkhangai</span></li>
+        </ul>
+    </div>
+  </section>
+
+  <!-- In class: two photo reels drifting in opposite directions -->
+  <section id="moments" class="band" aria-labelledby="moments-title">
+    <div class="wrap">
+      <div class="head rise">
+        <div>
+          <p class="eyebrow"><i aria-hidden="true"></i><span data-i="m_e">MindMaze in class</span></p>
+          <h2 id="moments-title"><span data-i="m_a">Moments from</span> <em data-i="m_b">the classroom.</em></h2>
+        </div>
+        <p class="lede" data-i="m_l">Snapshots from MindMaze sessions across our partner schools, where children and mentors solve traditional puzzles side by side.</p>
+      </div>
+    </div>
+    <div class="reels">
+      <div class="reel ltr">
+        <div class="reel-track"><div class="reel-set"><figure class="shot"><img src="../assets/img/class-16.webp" width="1400" height="934" alt="Three students hold a wooden snowflake puzzle together in their hands" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-9.webp" width="934" height="1400" alt="A mentor holds up a bone-and-string puzzle in front of a painted space mural" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-1.webp" width="1400" height="1050" alt="A MindMaze mentor talks to a class of students at their desks" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-10.webp" width="934" height="1400" alt="A child holds up a wooden snowflake puzzle in class" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-13.webp" width="934" height="1400" alt="A mentor shows a girl how the star puzzle pieces fit" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-3.webp" width="1050" height="1400" alt="A mentor kneels beside a girl as she tries a wooden puzzle" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-18.webp" width="1400" height="934" alt="Children crowd around a mentor showing the bone-and-string puzzle" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-11.webp" width="934" height="1400" alt="Three students work together on a wooden star puzzle" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-5.webp" width="1400" height="1050" alt="A boy holds up a small wooden puzzle he is solving" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-14.webp" width="1400" height="934" alt="A mentor and a young girl each twist a wooden snake puzzle" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-7.webp" width="1400" height="1050" alt="Three students hold up the wooden puzzles they solved" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-12.webp" width="934" height="1400" alt="Two girls fit the pieces of a wooden star puzzle together" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-15.webp" width="934" height="1400" alt="A mentor demonstrates the bone-and-string puzzle to a class" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-2.webp" width="1400" height="1050" alt="Students and a mentor working on puzzles together at a desk" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-20.webp" width="934" height="1400" alt="A mentor and a girl solve a wooden snowflake puzzle together" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-6.webp" width="1400" height="1050" alt="A girl works on a wooden puzzle at her desk while classmates look on" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-17.webp" width="1400" height="934" alt="Three mentors help students with wooden snake puzzles at their desks" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-4.webp" width="1400" height="1050" alt="A mentor helps a group of students with their puzzle sheets" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-19.webp" width="934" height="1400" alt="A mentor helps a young girl with a wooden puzzle in the school hallway" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-8.webp" width="1400" height="1050" alt="A full classroom of students during a MindMaze session" loading="lazy" decoding="async"></figure></div><div class="reel-set" aria-hidden="true"><figure class="shot"><img src="../assets/img/class-16.webp" width="1400" height="934" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-9.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-1.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-10.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-13.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-3.webp" width="1050" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-18.webp" width="1400" height="934" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-11.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-5.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-14.webp" width="1400" height="934" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-7.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-12.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-15.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-2.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-20.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-6.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-17.webp" width="1400" height="934" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-4.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-19.webp" width="934" height="1400" alt="" loading="lazy" decoding="async"></figure><figure class="shot"><img src="../assets/img/class-8.webp" width="1400" height="1050" alt="" loading="lazy" decoding="async"></figure></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EDU -->
+  <section id="edu" class="band" aria-labelledby="edu-title">
+    <div class="wrap">
+      <div class="edu-head">
+        <div class="rise">
+          <p class="edu-kicker">MindMaze EDU</p>
+          <h2 id="edu-title">Puzzles in the <em>classroom</em></h2>
+          <p class="edu-intro">We bring traditional Mongolian puzzles into the school day: short, hands-on sessions where children slow down, test ideas and explain their thinking. Here is how a program works and what we are measuring.</p>
+        </div>
+        <figure class="fig" aria-label="Illustration: a person whose head is a wooden burr puzzle">
+          <img src="../assets/img/fig-body.webp" alt="">
+          <img class="head-l" src="../assets/img/fig-head.webp" alt="">
+          <img class="hand-l" src="../assets/img/fig-hand.webp" alt="">
+        </figure>
+      </div>
+      <div class="edu-body">
+        <div class="rise">
+          <h3 class="edu-h">At a glance</h3>
+          <table class="glance"><tbody>
+            <tr><th scope="row">Where</th><td>5 aimags · 12 schools</td></tr>
+            <tr><th scope="row">Reach</th><td>840+ children</td></tr>
+            <tr><th scope="row">Format</th><td>In-class sessions during the school day</td></tr>
+            <tr><th scope="row">Grades</th><td>3rd and 4th graders</td></tr>
+            <tr><th scope="row">Puzzles</th><td>6 traditional puzzles</td></tr>
+            <tr><th scope="row">Team</th><td>11 mentors &amp; volunteers</td></tr>
+          </tbody></table>
+        </div>
+        <div class="rise">
+          <h3 class="edu-h">Impact so far</h3>
+          <p class="edu-note">Early estimates from our first sessions. Full survey results from students and teachers are coming soon.</p>
+          <div class="stats">
+            <div><b data-count="78">78%</b><span>solved a puzzle on their own</span></div>
+            <div><b data-count="64">64%</b><span>focus longer in class, say teachers</span></div>
+            <div><b data-count="91">91%</b><span>want another session</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04: Impact -->
+  <section id="impact" class="band alt">
+    <div class="wrap split">
+      <div class="rise">
+        
+        <h2><span data-i="h5a">What a puzzle</span> <em data-i="h5b">leaves behind.</em></h2>
+      </div>
+      <div class="rise">
+        <p class="lede" data-i="l5">Parents and teachers tell us the change shows up outside the classroom: children who sit with a hard problem a little longer before asking for help.</p>
+        <div class="skills">
+          <span data-i="s1">Focus</span><span data-i="s2">Spatial reasoning</span><span data-i="s3">Persistence</span><span data-i="s4">Planning ahead</span><span data-i="s5">Fine motor skills</span><span data-i="s6">Confidence</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- CONTACT -->
+<footer id="contact">
+  <div class="wrap">
+    <div class="cta-grid">
+      <div class="rise">
+        <h2><span data-i="fa">Ready for the</span> <em data-i="fb">first piece?</em></h2>
+        <div class="mail-row">
+          <p data-i="fc">Write to us</p>
+          <div class="mail">
+            <strong id="mail">hello@mindmaze.mn</strong>
+            <button type="button" class="btn ghost sm" id="copy">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legal"><span>© 2026 MINDMAZE</span><span>hello@mindmaze.mn</span></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/RoundedBoxGeometry.js"></script>
+<script>
+document.documentElement.classList.add('js');
+
+/* ---------- language ---------- */
+const MN={nav_puzzles:"оньсого",nav_why:"тоглоом",nav_impact:"үр нөлөө",contact:"Холбогдох",
+h1a:"Нүүдлээр",h1b:"сэт.",l1:"MindMaze хүүхдүүдэд гар аргаар тоглох оньсогоор дамжуулан сэтгэн бодохыг заадаг: модон тоглоом, логик хүснэгт, тэвчээрийг шагнадаг стратегийн тоглоомууд.",cta1:"Оньсогыг үзэх",cta2:"Хөтөлбөрүүд",
+e2:"01 — Уламжлалт оньсого",h2a:"Хэсэг",h2b:"хэсгээр.",l2:"Уламжлалт оньсого анхаарал болон шүүмжлэлт сэтгэлгээг хөгжүүлнэ — нэг хэсгээр нэг удаа.",hint:"Гүйлгэж угсар · чирж эргүүл",cap:"Зургаан хэсэгтэй модон оньсого",
+e3:"02 — Монгол оньсого",g_a:"Өвөг дээдсийн",g_b:"тоглож байсан тоглоом.",g_l:"Мод, яснаас сийлсэн Монгол оньсого түгжиж, шигдэж, тайлагдана — логик, тэвчээр, ур чадварын сорил.",tag_int:"Шигдмэл",tag_dis:"Тайлах",g0t:"Одон оньсого",g0s:"Зургаан хэсэгтэй одон",g1t:"Загалмай оньсого",g1s:"Зургаан хэсэгтэй",g2t:"Загалмай түгжээ",g2s:"Гурван хэсэгтэй",g3t:"Оюун түлхүүр",g3s:"Цагирган оньсого",g4t:"Бугж нийлүүлэх",g4s:"Яс ба утсан оньсого",g5t:"Цасан ширхэг",g5s:"Шигдмэл оньсого",
+e4:"03 — Сургууль",ns_h:"Дараагийн түнш сургуулиуд",ns0:"Эрдэнэтийн 1-р сургууль",ns1:"Өвөрхангайн 2-р сургууль",ns2:"Хэрлэн сумын 1-р сургууль",ns3:"Архангайн 3-р сургууль",h4a:"Хөтөлбөр нэвтэрсэн",h4b:"3 сургууль.",sc0:"Улаанбаатарын 21-р дунд сургууль",sc1:"Улаанбаатарын 24-р дунд сургууль",sc2:"Өвөрхангайн 1-р дунд сургууль",
+e5:"04 — Үр нөлөө",h5a:"Оньсогын",h5b:"үлдээдэг зүйл.",l5:"Эцэг эх, багш нар өөрчлөлт ангиас гадна харагддаг гэж хэлдэг: хүүхдүүд тусламж хүсэхээсээ өмнө хэцүү асуудал дээр арай удаан суудаг болсон.",s1:"Анхаарал",s2:"Орон зайн сэтгэлгээ",s3:"Тэвчээр",s4:"Урьдчилан төлөвлөх",s5:"Нарийн моторик",s6:"Өөртөө итгэх",
+fa:"Анхны хэсгээ",fb:"угсрах уу?",fc:"Бидэнд бичээрэй",
+m_e:"MindMaze ангид",m_a:"Ангид өнгөрүүлсэн",m_b:"мөчүүд.",m_l:"Түнш сургуулиудад зохион байгуулсан MindMaze хичээлүүдээс: хүүхдүүд багш нартайгаа хамт уламжлалт оньсого тайлж буй мөчүүд."};
+const EN={};document.querySelectorAll('[data-i]').forEach(el=>{if(!(el.dataset.i in EN))EN[el.dataset.i]=el.textContent});
+function setLang(l){
+  const d=l==='mn'?MN:EN;
+  document.querySelectorAll('[data-i]').forEach(el=>{const v=d[el.dataset.i];if(v)el.textContent=v});
+  document.documentElement.lang=l==='mn'?'mn':'en';
+  document.querySelectorAll('.lang button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===l)));
+  try{localStorage.setItem('mm-lang',l)}catch(e){}
+}
+document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));
+try{if(localStorage.getItem('mm-lang')==='mn')setLang('mn')}catch(e){}
+
+/* ---------- copy email ---------- */
+document.getElementById('copy').addEventListener('click',e=>{
+  const btn=e.currentTarget,txt=document.getElementById('mail').textContent;
+  const done=()=>{btn.textContent='Copied';setTimeout(()=>btn.textContent='Copy',1600)};
+  const sel=()=>{const r=document.createRange();r.selectNodeContents(document.getElementById('mail'));const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='Selected'};
+  try{navigator.clipboard.writeText(txt).then(done,sel)}catch(err){sel()}
+});
+
+/* ---------- active nav, progress, entrances, count-up ---------- */
+const navLinks=[...document.querySelectorAll('.links a')];
+const progressEl=document.getElementById('progress');
+const sectIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id))}),{rootMargin:'-45% 0px -50% 0px'});
+document.querySelectorAll('main section[id]').forEach(s=>sectIO.observe(s));
+const riseIO=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');riseIO.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});
+document.querySelectorAll('.rise').forEach((el,i)=>{el.style.transitionDelay=(i%3)*80+'ms';riseIO.observe(el)});
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const countIO=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting)return;countIO.unobserve(e.target);
+  if(reduceMotion)return;
+  const el=e.target,end=+el.dataset.count,t0=performance.now();
+  (function tick(t){const k=Math.min(1,(t-t0)/1400),v=Math.round(end*(1-Math.pow(1-k,3)));el.textContent=v+'%';if(k<1)requestAnimationFrame(tick)})(t0);
+}),{threshold:.6});
+document.querySelectorAll('[data-count]').forEach(el=>countIO.observe(el));
+
+/* ---------- photo reels: scrolling the page speeds them up, in the direction you scroll ---------- */
+(function(){
+  if(reduceMotion||!document.getAnimations)return;
+  const tracks=[...document.querySelectorAll('.reel-track')];
+  let lastY=scrollY,boost=0;
+  addEventListener('scroll',()=>{boost=Math.max(-6,Math.min(6,boost+(scrollY-lastY)*.04));lastY=scrollY},{passive:true});
+  (function tick(){
+    boost*=.92;
+    tracks.forEach(t=>t.getAnimations().forEach(a=>{a.playbackRate=1+Math.abs(boost)}));
+    requestAnimationFrame(tick);
+  })();
+})();
+
+/* ---------- 3D six-piece wooden burr ---------- */
+(function(){
+  if(!window.THREE)return;
+  const canvas=document.getElementById('gl');
+  let renderer;
+  try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'})}catch(e){return}
+  document.documentElement.classList.add('has-gl');
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
+  renderer.physicallyCorrectLights=false;
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(30,1,.1,200);
+  const DIST=24;camera.position.set(0,0,DIST);
+
+  scene.add(new THREE.HemisphereLight(0xfff3e0,0x6b4a2a,.75));
+  const key=new THREE.DirectionalLight(0xfff1dc,1.5);key.position.set(-8,14,12);scene.add(key);
+  const rim=new THREE.DirectionalLight(0xffe0b8,.5);rim.position.set(10,-4,-8);scene.add(rim);
+
+  /* wood grain from the MindMaze board scans; each piece samples a different strip so no two look alike */
+  const loader=new THREE.TextureLoader(),aniso=renderer.capabilities.getMaxAnisotropy();
+  function woodTexture(seed){
+    const map=loader.load('../assets/img/wood.jpg'),bump=loader.load('../assets/img/wood-bump.jpg');
+    [map,bump].forEach(t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=aniso;t.repeat.set(.55,.5);t.offset.set((seed*.173)%1,(seed*.311)%1);t.needsUpdate=true});
+    map.encoding=THREE.sRGBEncoding;return {map,bump};
+  }
+
+  /* classic six-piece burr: three perpendicular pairs, cross-section 2, length 7 */
+  const L=7,W=2;
+  const geo=THREE.RoundedBoxGeometry?new THREE.RoundedBoxGeometry(L,W,W,4,.22):new THREE.BoxGeometry(L,W,W);
+  const AX={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)};
+  const defs=[
+    {axis:'x',pos:[0,0,1]},{axis:'x',pos:[0,0,-1]},
+    {axis:'y',pos:[1,0,0]},{axis:'y',pos:[-1,0,0]},
+    {axis:'z',pos:[0,1,0]},{axis:'z',pos:[0,-1,0]},
+  ];
+  const puzzle=new THREE.Group(),spinner=new THREE.Group();spinner.add(puzzle);scene.add(spinner);
+
+  /* soft contact shadow under the puzzle */
+  const sc=document.createElement('canvas');sc.width=256;sc.height=64;
+  const sg=sc.getContext('2d'),grd=sg.createRadialGradient(128,32,2,128,32,126);
+  grd.addColorStop(0,'rgba(0,0,0,.8)');grd.addColorStop(.45,'rgba(0,0,0,.35)');grd.addColorStop(1,'rgba(0,0,0,0)');
+  sg.setTransform(1,0,0,.25,0,24);sg.fillStyle=grd;sg.fillRect(0,0,256,256);
+  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(10,2.6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc),transparent:true,depthWrite:false,opacity:0}));
+  shadow.position.set(0,-5.4,-2.5);spinner.add(shadow);
+
+  // assembly order: the burr goes together in pairs, then the key piece
+  const order=[2,3,4,0,1,5];
+  // where each piece appears from (spinner space, near the camera, alternating sides)
+  const entries=[[-1.15,.7],[1.2,-.6],[-.9,-1.05],[1.05,.95],[-1.25,-.25],[1.1,.4]];
+  const pieces=defs.map((d,i)=>{
+    const w=woodTexture(i+3);
+    const m=new THREE.MeshStandardMaterial({map:w.map,bumpMap:w.bump,bumpScale:.012,color:new THREE.Color().setHSL(.075,.5,.8+(i%3)*.025),roughness:.62,metalness:0});
+    const mesh=new THREE.Mesh(geo,m);
+    const rot=new THREE.Euler();if(d.axis==='y')rot.set(0,0,Math.PI/2);if(d.axis==='z')rot.set(0,Math.PI/2,0);
+    const endQ=new THREE.Quaternion().setFromEuler(rot);
+    const endP=new THREE.Vector3(...d.pos);
+    const sign=(i%2?-1:1);
+    // lined up with its slot, ready to slide in along its own length
+    const preP=endP.clone().add(AX[d.axis].clone().multiplyScalar(sign*L*.62));
+    const tumble=new THREE.Quaternion().setFromEuler(new THREE.Euler((i%2?1:-1)*2.1,1.2+i*.9,(i%3-1)*1.4));
+    const startQ=tumble.multiply(endQ.clone());
+    puzzle.add(mesh);mesh.position.copy(endP);mesh.quaternion.copy(endQ);
+    return {mesh,endP,preP,endQ,startQ,shown:0};
+  });
+  const N=pieces.length;
+  const RADIUS=5.3; // world radius of the assembled puzzle
+
+  const slots=[...document.querySelectorAll('[data-slot]')];
+  const build=document.getElementById('puzzles');
+  const headerEl=document.querySelector('header');
+  const countEl=document.getElementById('count'),barEl=document.getElementById('bar');
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),ease=t=>1-Math.pow(1-t,3),smooth=t=>t*t*(3-2*t),inOut=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+
+  /* drag on any slot to turn; pointer elsewhere tilts slightly */
+  let dragX=0,dragY=0,vx=0,vy=0,dragging=false,lx=0,ly=0,tiltX=0,tiltY=0,mx=0,my=0;
+  slots.forEach(s=>{
+    s.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;vx=vy=0;s.setPointerCapture(e.pointerId)});
+    s.addEventListener('pointermove',e=>{if(!dragging)return;vx=(e.clientX-lx)*.009;vy=(e.clientY-ly)*.009;dragX+=vx;dragY+=vy;lx=e.clientX;ly=e.clientY});
+    const up=()=>dragging=false;s.addEventListener('pointerup',up);s.addEventListener('pointercancel',up);
+  });
+  addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5},{passive:true});
+
+  let vw=0,vh=0,unit=1;
+  function resize(){
+    vw=innerWidth;vh=innerHeight;
+    renderer.setSize(vw,vh,false);camera.aspect=vw/vh;camera.updateProjectionMatrix();
+    unit=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*DIST/vh; // world units per css px at z=0
+  }
+  addEventListener('resize',resize);resize();
+
+  const pos=new THREE.Vector3(),tgt=new THREE.Vector3(),far=new THREE.Vector3(),inv=new THREE.Quaternion();
+  let scl=1,tscl=1,first=true,visible=false,built=0;canvas.style.visibility='hidden';
+  const clock=new THREE.Clock();let spin=0,yaw=0;
+
+  /* where a piece is for progress t (0 = off-screen, 1 = placed) */
+  function place(pc,k,t){
+    const m=pc.mesh;
+    if(t>=1){m.position.copy(pc.endP);m.quaternion.copy(pc.endQ);m.visible=true;return}
+    if(t<=0){m.visible=false;return}
+    m.visible=true;
+    // entry point near the camera, held fixed on screen while the puzzle turns
+    const e=entries[k%entries.length];
+    const zNear=Math.min(13,DIST/Math.max(scl,.2)-5);
+    far.set(e[0]*vw/vh*7,e[1]*7,zNear).applyQuaternion(inv);
+    if(t<.68){
+      const u=t/.68;
+      m.position.lerpVectors(far,pc.preP,ease(u));
+      m.quaternion.copy(pc.startQ).slerp(pc.endQ,inOut(u));
+    }else{
+      const u=(t-.68)/.32;
+      m.position.lerpVectors(pc.preP,pc.endP,ease(u));
+      m.quaternion.copy(pc.endQ);
+    }
+  }
+
+  function frame(){
+    requestAnimationFrame(frame);
+    const dt=Math.min(clock.getDelta(),.05),T=clock.elapsedTime;
+
+    const de=document.documentElement;progressEl.style.width=(scrollY/Math.max(1,de.scrollHeight-vh)*100)+'%';
+
+    // which slot is the puzzle anchored to?
+    let best=null,bestD=1e9,anyVisible=false;
+    for(const s of slots){
+      const r=s.getBoundingClientRect();
+      if(r.bottom>0&&r.top<vh)anyVisible=true;
+      const d=Math.abs((r.top+r.height/2)-vh/2);
+      if(d<bestD){bestD=d;best=r}
+    }
+    if(!anyVisible){if(visible){canvas.style.visibility='hidden';visible=false}return}
+    if(!visible){canvas.style.visibility='visible';visible=true}
+    tgt.set((best.left+best.width/2-vw/2)*unit,-(best.top+best.height/2-vh/2)*unit,0);
+    tscl=Math.min(best.width,best.height)*.5*unit/RADIUS;
+    const k=first?1:1-Math.exp(-dt*6);first=false;
+    pos.lerp(tgt,k);scl+=(tscl-scl)*k;
+    spinner.position.copy(pos);spinner.scale.setScalar(scl);
+
+    // scroll builds the puzzle once: the first piece arrives as the section comes up, the rest one by one; it never comes apart again
+    const r=build.getBoundingClientRect(),navH=headerEl.getBoundingClientRect().bottom;
+    const pin=Math.max(1,r.height-(vh-navH)),sp=clamp((navH-r.top)/pin,0,1);
+    const intro=reduceMotion?1:.17*smooth(clamp((T-.35)/1.6,0,1));     // first piece flies in on load
+    built=Math.max(built,intro,sp>0.002?Math.min(1,.17+sp*1.0):0);
+    const p=built;
+    let placed=0;
+    order.forEach((idx,n)=>{
+      const pc=pieces[idx];
+      let goal;
+      if(reduceMotion)goal=1;
+      else{
+        goal=clamp((p-n*.14)/.17,0,1);   // arriving, one at a time
+      }
+      pc.shown+=(goal-pc.shown)*Math.min(1,dt*5.5);
+      if(Math.abs(goal-pc.shown)<.0008)pc.shown=goal;
+      if(pc.shown>.995)placed++;
+    });
+    inv.copy(puzzle.quaternion).invert();
+    order.forEach((idx,n)=>place(pieces[idx],n,pieces[idx].shown>.995?1:pieces[idx].shown));
+    
+    
+    shadow.material.opacity=.15+.55*(placed/N);
+
+    // motion: slow idle spin, scroll yaw, drag with inertia, mouse tilt, gentle float
+    if(!dragging){vx*=.94;vy*=.94;dragX+=vx;dragY+=vy}
+    if(!reduceMotion)spin+=dt*(.12+.16*(placed/N));
+    yaw+=(p*Math.PI*.9-yaw)*Math.min(1,dt*4);
+    tiltX+=(my*.3-tiltX)*Math.min(1,dt*3);tiltY+=(mx*.45-tiltY)*Math.min(1,dt*3);
+    puzzle.rotation.set(.45+dragY+tiltX+Math.sin(spin*.6)*.05,-.65+spin+dragX+tiltY+yaw,.1);
+    puzzle.position.y=reduceMotion?0:Math.sin(T*1.1)*.14*(placed/N);
+    renderer.render(scene,camera);
+  }
+  frame();
+})();
+</script>
+
+</body>
+</html>

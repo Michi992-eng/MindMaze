@@ -26,7 +26,6 @@ export function burrMaterial(loader: THREE.TextureLoader, seed: number, maxAniso
     t.anisotropy = maxAniso;
     t.repeat.set(0.55, 0.5);
     t.offset.set((seed * 0.173) % 1, (seed * 0.311) % 1);
-    t.needsUpdate = true;
   });
   map.encoding = THREE.sRGBEncoding;
   return new THREE.MeshStandardMaterial({
@@ -161,7 +160,7 @@ export function startBurr({ canvas, section, floor, count, bar }: Elements): () 
     const h = canvas.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    const mobile = w < 760;
+    const mobile = w <= 960;
     camera.position.z = mobile ? 40 : 30;
     // shift the object right of the copy on desktop, below it on mobile
     camera.setViewOffset(w, h, mobile ? 0 : -w * 0.08, mobile ? -h * 0.14 : 0, w, h);
