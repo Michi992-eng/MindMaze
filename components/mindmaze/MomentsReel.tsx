@@ -34,7 +34,6 @@ const SHOTS: Shot[] = [16, 9, 1, 10, 13, 3, 18, 11, 5, 14, 7, 12, 15, 2, 20, 6, 
 }));
 const N = SHOTS.length;
 const mod = (k: number) => ((k % N) + N) % N;
-const pad = (i: number) => String(i).padStart(2, '0');
 
 /** SLIDE_EASE as a cubic-bezier, solved for y at time x. */
 function ease(x: number): number {
@@ -242,7 +241,6 @@ export default function MomentsReel() {
   const swipe = useRef<{ x: number; y: number } | null>(null);
   const swiped = useRef(false);
 
-  const index = mod(pos);
   const slots: number[] = [];
   for (let k = pos - 3; k <= pos + 3; k++) slots.push(k);
 
@@ -345,10 +343,6 @@ export default function MomentsReel() {
             </ul>
           </div>
 
-          {/* no live region: auto-steps are not announced; the counter is plain text */}
-          <p className="focus-count">
-            <b>{pad(index + 1)}</b> / {pad(N)}
-          </p>
         </div>
       </div>
     </section>

@@ -715,19 +715,6 @@ body:has(.mm)::before {
   object-fit: cover;
   pointer-events: none;
 }
-.mm .focus-count {
-  min-width: 72px;
-  margin: clamp(16px, 2vw, 24px) 0 0;
-  font-size: 15px;
-  letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  color: var(--ink-2);
-}
-.mm .focus-count b {
-  font-weight: 400;
-  color: var(--ink);
-}
 @media (max-width: 639px) {
   .mm .focus-stage {
     --S: calc(100cqw * 0.72);
