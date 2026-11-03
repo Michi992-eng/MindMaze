@@ -18,7 +18,6 @@ export default function Impact() {
           </h2>
         </Rise>
         <Rise index={17}>
-          <p className="lede">{t('l5')}</p>
           <div className="skills">
             {SKILLS.map((k) => (
               <span key={k}>{t(k)}</span>

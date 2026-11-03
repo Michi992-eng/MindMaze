@@ -380,6 +380,8 @@ body:has(.mm)::before {
 }
 .mm .hero h1 {
   font-size: clamp(52px, 7.4vw, 112px);
+  /* room for Cyrillic marks above (Й) and tails below (Д) so stacked lines don't touch */
+  line-height: 1.06;
   margin: 22px 0 20px;
 }
 .mm .stage-side {
@@ -464,7 +466,8 @@ body:has(.mm)::before {
   display: flex;
   flex-wrap: wrap;
   gap: 24px 64px;
-  align-items: end;
+  /* the lede's last line sits on the heading's last line (not on the h2's bottom margin) */
+  align-items: last baseline;
   justify-content: space-between;
   margin-bottom: clamp(36px, 5vw, 64px);
 }
@@ -474,6 +477,10 @@ body:has(.mm)::before {
 }
 .mm .head .lede {
   flex: 0 1 420px;
+}
+.mm #moments h2 {
+  /* room for Cyrillic marks above (Й, Ү) and tails below (Д) between stacked lines */
+  line-height: 1.06;
 }
 .mm #games h2 {
   font-size: clamp(48px, 7vw, 104px);
@@ -909,6 +916,9 @@ body:has(.mm)::before {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 28px;
+}
+.mm .skills:first-child {
+  margin-top: 0;
 }
 .mm .skills span {
   font-size: 20px;
