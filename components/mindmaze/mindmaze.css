@@ -381,7 +381,7 @@ body:has(.mm)::before {
 .mm .hero h1 {
   font-size: clamp(52px, 7.4vw, 112px);
   /* room for Cyrillic marks above (Й) and tails below (Д) so stacked lines don't touch */
-  line-height: 1.06;
+  line-height: 1.16;
   margin: 22px 0 20px;
 }
 .mm .stage-side {
@@ -902,9 +902,15 @@ body:has(.mm)::before {
 /* impact */
 .mm .split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  /* wider heading column so the question breaks into fewer lines */
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: clamp(24px, 5vw, 72px);
-  align-items: start;
+  /* skill tags sit level with the middle of the heading, not floating at its top */
+  align-items: center;
+}
+.mm .split h2 {
+  line-height: 1.06; /* room for Й and descenders between lines */
+  margin: 0;
 }
 @media (max-width: 860px) {
   .mm .split {
