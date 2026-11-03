@@ -43,14 +43,23 @@ const RADIUS = 5.3; // world radius of the assembled puzzle
 const DIST = 24;
 
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
-const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const smooth = (t: number) => t * t * (3 - 2 * t);
-const inOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+/** the one easing a piece follows over its whole flight: quick out of the entry, settling into the slot */
+const flight = (t: number) => 1 - Math.pow(1 - t, 2.4);
+/** frame-rate independent damping factor: fraction of the gap to close this frame at rate k (1/s) */
+const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
+/* damping rates (1/s): higher = snappier */
+const BUILD_K = 7; // scroll/intro progress → build progress
+const PIECE_K = 5.5; // build progress → each piece's flight
+const FOLLOW_K = 6; // puzzle follows the hero slot
+const INERTIA = 0.94; // drag velocity kept per 1/60 s after release
 
 type Piece = {
   mesh: THREE.Mesh;
   endP: THREE.Vector3;
   preP: THREE.Vector3;
+  /** second Bézier handle: further out along the slot axis, so the last stretch slides straight in */
+  ctlP: THREE.Vector3;
   endQ: THREE.Quaternion;
   startQ: THREE.Quaternion;
   shown: number;
@@ -185,10 +194,12 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
         new THREE.Euler((i % 2 ? 1 : -1) * 2.1, 1.2 + i * 0.9, ((i % 3) - 1) * 1.4),
       );
       const startQ = tumble.multiply(endQ.clone());
+      const ctlP = preP.clone().add(preP.clone().sub(endP).multiplyScalar(0.4));
       puzzle.add(mesh);
       mesh.position.copy(endP);
       mesh.quaternion.copy(endQ);
-      return { mesh, endP, preP, endQ, startQ, shown: 0 };
+      mesh.visible = false;
+      return { mesh, endP, preP, ctlP, endQ, startQ, shown: 0 };
     });
     const N = pieces.length;
 
@@ -200,6 +211,7 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
       dragging = false,
       lx = 0,
       ly = 0,
+      lt = 0,
       tiltX = 0,
       tiltY = 0,
       mx = 0,
@@ -208,6 +220,7 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
       dragging = true;
       lx = e.clientX;
       ly = e.clientY;
+      lt = e.timeStamp;
       vx = vy = 0;
       try {
         slot.setPointerCapture(e.pointerId);
@@ -217,15 +230,22 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
     };
     const onMove = (e: PointerEvent) => {
       if (!dragging) return;
-      vx = (e.clientX - lx) * 0.009;
-      vy = (e.clientY - ly) * 0.009;
-      dragX += vx;
-      dragY += vy;
+      const ddx = (e.clientX - lx) * 0.009;
+      const ddy = (e.clientY - ly) * 0.009;
+      dragX += ddx;
+      dragY += ddy;
+      // velocity in "per 1/60 s" units, whatever the pointer's event rate; lightly smoothed
+      const per60 = 16.67 / Math.max(4, e.timeStamp - lt);
+      vx = vx * 0.4 + ddx * per60 * 0.6;
+      vy = vy * 0.4 + ddy * per60 * 0.6;
       lx = e.clientX;
       ly = e.clientY;
+      lt = e.timeStamp;
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
       dragging = false;
+      // held still before letting go: no fling
+      if (e.timeStamp - lt > 80) vx = vy = 0;
     };
     const onHover = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return;
@@ -264,10 +284,11 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
       tgt = new THREE.Vector3(),
       far = new THREE.Vector3(),
       inv = new THREE.Quaternion();
+    const ctl = new THREE.Vector3();
     let scl = 1,
       first = true,
       visible = false,
-      built = 0,
+      built = 0, // damped build progress, 0…1; follows the scroll both ways
       spin = 0,
       yaw = 0,
       drawn = false,
@@ -276,33 +297,35 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
     const clock = new THREE.Clock();
     const header = slot.closest('.mm')?.querySelector('header') ?? null;
 
-    /* where a piece is for progress t (0 = off-screen, 1 = placed) */
+    /* where a piece is for progress t (0 = off-screen, 1 = placed). One continuous flight: a cubic
+       Bézier far → ctlP → preP → endP under a single easing, so it never stops half-way. Both inner
+       handles sit on the slot's axis, so the final approach slides straight in along the piece's length. */
     const place = (pc: Piece, k: number, t: number) => {
       const m = pc.mesh;
-      if (t >= 1) {
-        m.position.copy(pc.endP);
-        m.quaternion.copy(pc.endQ);
-        m.visible = true;
-        return;
-      }
       if (t <= 0) {
         m.visible = false;
         return;
       }
       m.visible = true;
+      if (t >= 1) {
+        m.position.copy(pc.endP);
+        m.quaternion.copy(pc.endQ);
+        return;
+      }
       // entry point near the camera, held fixed on screen while the puzzle turns
       const e = ENTRIES[k % ENTRIES.length];
       const zNear = Math.min(13, DIST / Math.max(scl, 0.2) - 5);
       far.set(((e[0] * vw) / vh) * 7, e[1] * 7, zNear).applyQuaternion(inv);
-      if (t < 0.68) {
-        const u = t / 0.68;
-        m.position.lerpVectors(far, pc.preP, ease(u));
-        m.quaternion.copy(pc.startQ).slerp(pc.endQ, inOut(u));
-      } else {
-        const u = (t - 0.68) / 0.32;
-        m.position.lerpVectors(pc.preP, pc.endP, ease(u));
-        m.quaternion.copy(pc.endQ);
-      }
+      const u = flight(t);
+      const v = 1 - u;
+      m.position
+        .copy(far)
+        .multiplyScalar(v * v * v)
+        .add(ctl.copy(pc.ctlP).multiplyScalar(3 * v * v * u))
+        .add(ctl.copy(pc.preP).multiplyScalar(3 * v * u * u))
+        .add(ctl.copy(pc.endP).multiplyScalar(u * u * u));
+      // the tumble unwinds over the whole flight too, mostly settled before the piece enters its slot
+      m.quaternion.copy(pc.startQ).slerp(pc.endQ, 1 - Math.pow(v, 4));
     };
 
     let raf = 0;
@@ -339,44 +362,49 @@ export default function BurrPuzzle({ slotRef, sectionRef, onSupport }: Props) {
       // follow the slot, whatever the layout
       tgt.set((r.left + r.width / 2 - vw / 2) * unit, -(r.top + r.height / 2 - vh / 2) * unit, 0);
       const tscl = (Math.min(r.width, r.height) * 0.5 * unit) / RADIUS;
-      const k = first ? 1 : 1 - Math.exp(-dt * 6);
+      const k = first ? 1 : damp(FOLLOW_K, dt);
       first = false;
       pos.lerp(tgt, k);
       scl += (tscl - scl) * k;
       spinner.position.copy(pos);
       spinner.scale.setScalar(scl);
 
-      // scroll builds the puzzle once: the first piece flies in on load, the rest one by one
-      // while the hero is pinned; progress only grows, so it never comes apart again
+      // scroll drives the build both ways: the first piece flies in on load, the rest one by one
+      // while the hero is pinned; scrolling back up takes them out again in reverse order
       const pin = Math.max(1, sr.height - (vh - navH));
       const sp = clamp((navH - sr.top) / pin, 0, 1);
       const intro = reduceMotion ? 1 : 0.17 * smooth(clamp((T - 0.35) / 1.6, 0, 1));
-      built = Math.max(built, intro, sp > 0.002 ? Math.min(1, 0.17 + sp) : 0);
+      // the first piece's 0.17 head start ramps in over the first bit of scroll instead of jumping
+      const fromScroll = Math.min(1, sp + 0.17 * smooth(clamp(sp / 0.03, 0, 1)));
+      const buildGoal = Math.max(intro, fromScroll);
+      // a fast flick moves the goal in a frame or two; the build eases after it
+      built = reduceMotion ? 1 : built + (buildGoal - built) * damp(BUILD_K, dt);
       const p = built;
 
-      let placed = 0;
+      let placed = 0; // continuous count of placed pieces (no threshold, so nothing steps)
       ORDER.forEach((idx, n) => {
         const pc = pieces[idx];
         const goal = reduceMotion ? 1 : clamp((p - n * 0.14) / 0.17, 0, 1);
-        pc.shown = reduceMotion ? 1 : pc.shown + (goal - pc.shown) * Math.min(1, dt * 5.5);
-        if (Math.abs(goal - pc.shown) < 0.0008) pc.shown = goal;
-        if (pc.shown > 0.995) placed++;
+        pc.shown = reduceMotion ? 1 : pc.shown + (goal - pc.shown) * damp(PIECE_K, dt);
+        placed += pc.shown;
       });
       inv.copy(puzzle.quaternion).invert();
-      ORDER.forEach((idx, n) => place(pieces[idx], n, pieces[idx].shown > 0.995 ? 1 : pieces[idx].shown));
+      ORDER.forEach((idx, n) => place(pieces[idx], n, pieces[idx].shown));
       shadowMat.opacity = 0.15 + 0.55 * (placed / N);
 
       // motion: slow idle spin, scroll yaw, drag with inertia, mouse tilt, gentle float
       if (!dragging) {
-        vx *= 0.94;
-        vy *= 0.94;
-        dragX += vx;
-        dragY += vy;
+        // same glide at 60 Hz and 120 Hz
+        const f = Math.pow(INERTIA, dt * 60);
+        vx *= f;
+        vy *= f;
+        dragX += vx * dt * 60;
+        dragY += vy * dt * 60;
       }
       if (!reduceMotion) spin += dt * (0.12 + 0.16 * (placed / N));
-      yaw += (p * Math.PI * 0.9 - yaw) * Math.min(1, dt * 4);
-      tiltX += (my * 0.3 - tiltX) * Math.min(1, dt * 3);
-      tiltY += (mx * 0.45 - tiltY) * Math.min(1, dt * 3);
+      yaw += (p * Math.PI * 0.9 - yaw) * damp(4, dt);
+      tiltX += (my * 0.3 - tiltX) * damp(3, dt);
+      tiltY += (mx * 0.45 - tiltY) * damp(3, dt);
       puzzle.rotation.set(0.45 + dragY + tiltX + Math.sin(spin * 0.6) * 0.05, -0.65 + spin + dragX + tiltY + yaw, 0.1);
       puzzle.position.y = reduceMotion ? 0 : Math.sin(T * 1.1) * 0.14 * (placed / N);
       renderer.render(scene, camera);

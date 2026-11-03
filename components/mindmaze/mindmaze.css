@@ -690,7 +690,7 @@ body:has(.mm)::before {
   margin: 0;
   padding: 0;
   list-style: none;
-  transition: opacity 0.16s ease;
+  transition: opacity var(--fade, 0.16s) ease-in-out;
 }
 .mm .focus-stage.is-fading .focus-track {
   opacity: 0;
@@ -715,33 +715,9 @@ body:has(.mm)::before {
   object-fit: cover;
   pointer-events: none;
 }
-.mm .focus-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-top: clamp(16px, 2vw, 24px);
-}
-.mm .focus-btn {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-}
-.mm .focus-btn:hover {
-  color: var(--ink);
-  border-color: var(--ink-2);
-}
 .mm .focus-count {
   min-width: 72px;
-  margin: 0;
+  margin: clamp(16px, 2vw, 24px) 0 0;
   font-size: 15px;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
